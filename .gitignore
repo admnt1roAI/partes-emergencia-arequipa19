@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.venv/
+__pycache__/
+.pytest_cache/
+.env
+.env.*
+!.env.example
+*.log
+*.sqlite3
+*.db
+*.tsbuildinfo
+desktop/output/
+tmp/
+/hitorial partes em.txt

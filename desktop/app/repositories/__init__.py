@@ -1,0 +1,1 @@
+"""Acceso local a datos."""
