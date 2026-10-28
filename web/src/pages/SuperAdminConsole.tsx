@@ -51,7 +51,17 @@ export default function SuperAdminConsole({ onNewReport, onSignOut }: { onNewRep
   const callUserAdmin = useCallback(async (payload: Record<string, unknown>) => {
     if (!supabase) throw new Error('No hay conexión con Supabase.');
     const { data, error: invokeError } = await supabase.functions.invoke('admin-users', { body: payload });
-    if (invokeError) throw invokeError;
+    if (invokeError) {
+      let detail = invokeError.message;
+      const context = (invokeError as Error & { context?: Response }).context;
+      if (context && typeof context.json === 'function') {
+        try {
+          const body = await context.clone().json() as { error?: string; message?: string };
+          detail = body.error || body.message || detail;
+        } catch { /* Keep the SDK message when the response isn't JSON. */ }
+      }
+      throw new Error(detail);
+    }
     if (data?.error) throw new Error(data.error);
     return data;
   }, []);
