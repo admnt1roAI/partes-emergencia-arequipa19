@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import SuperAdminConsole from './SuperAdminConsole';
 
 type Profile = { full_name: string; role: string; company_id: string; is_active: boolean };
 type Catalog = { category: string; value: string };
@@ -128,6 +129,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState('');
   const [submitError, setSubmitError] = useState('');
+  const [showSuperAdmin, setShowSuperAdmin] = useState(true);
 
   useEffect(() => {
     const client = supabase;
@@ -255,8 +257,13 @@ export default function App() {
     <SignIn message={authMessage || accessError} setMessage={setAuthMessage} />
   </>;
 
+  if (!demoMode && profile?.role === 'general_admin' && showSuperAdmin) return <div className="app-shell">
+    <header className="topbar"><img className="top-crest" src={emblemSrc} alt="Escudo CGBVP" /><div className="identity"><strong>CUERPO GENERAL DE BOMBEROS VOLUNTARIOS DEL PERÚ</strong><span>VII COMANDANCIA DEPARTAMENTAL</span><span>BENEMÉRITA Y CENTENARIA COMPAÑÍA DE BOMBEROS AREQUIPA 19</span></div><div className="product">Consola de superadministración</div><div className="user-box"><span>{profile.full_name}</span><button type="button" onClick={signOut}>Cerrar sesión</button></div></header>
+    <SuperAdminConsole onNewReport={() => setShowSuperAdmin(false)} onSignOut={signOut} />
+  </div>;
+
   return <div className="app-shell">
-    <header className="topbar"><img className="top-crest" src={emblemSrc} alt="Escudo CGBVP" /><div className="identity"><strong>CUERPO GENERAL DE BOMBEROS VOLUNTARIOS DEL PERÚ</strong><span>VII COMANDANCIA DEPARTAMENTAL</span><span>BENEMÉRITA Y CENTENARIA COMPAÑÍA DE BOMBEROS AREQUIPA 19</span></div><div className="product">Registro web de partes</div>{demoMode ? <div className="user-box"><span>Vista pública</span></div> : <div className="user-box"><span>{profile?.full_name}</span><button type="button" onClick={signOut}>Cerrar sesión</button></div>}</header>
+    <header className="topbar"><img className="top-crest" src={emblemSrc} alt="Escudo CGBVP" /><div className="identity"><strong>CUERPO GENERAL DE BOMBEROS VOLUNTARIOS DEL PERÚ</strong><span>VII COMANDANCIA DEPARTAMENTAL</span><span>BENEMÉRITA Y CENTENARIA COMPAÑÍA DE BOMBEROS AREQUIPA 19</span></div><div className="product">Registro web de partes</div>{demoMode ? <div className="user-box"><span>Vista pública</span></div> : <div className="user-box">{profile?.role === 'general_admin' && <button type="button" onClick={() => setShowSuperAdmin(true)}>Panel administrador</button>}<span>{profile?.full_name}</span><button type="button" onClick={signOut}>Cerrar sesión</button></div>}</header>
     <main className="main-content">
       {demoMode && <div className="demo-banner"><strong>Vista previa pública</strong><span>Puedes explorar y completar el formulario. Los datos de demostración no se guardan ni se envían.</span></div>}
       <div className="form-heading"><div className="heading-icon">▤</div><div><h1>Parte de emergencia</h1><p>Registro digital · Los campos con * son obligatorios</p></div></div>
