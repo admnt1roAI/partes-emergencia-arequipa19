@@ -41,6 +41,17 @@ function validateRole(value: unknown): Role {
   return value as Role;
 }
 
+function firstKeyFromEnvironment(name: string): string | undefined {
+  const raw = Deno.env.get(name);
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    return Object.values(parsed).find((value) => typeof value === 'string' && value.length > 0);
+  } catch {
+    return undefined;
+  }
+}
+
 async function listAllUsers(admin: SupabaseClient) {
   const users = [];
   for (let page = 1; page <= 20; page += 1) {
@@ -87,8 +98,10 @@ Deno.serve(async (request) => {
   if (request.method !== 'POST') return response({ error: 'Método no permitido.' }, 405);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const publicKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const publicKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_PUBLISHABLE_KEY')
+    ?? firstKeyFromEnvironment('SUPABASE_PUBLISHABLE_KEYS');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY')
+    ?? firstKeyFromEnvironment('SUPABASE_SECRET_KEYS');
   if (!supabaseUrl || !publicKey || !serviceKey) {
     return response({ error: 'Falta configurar el entorno seguro de Supabase Functions.' }, 500);
   }
