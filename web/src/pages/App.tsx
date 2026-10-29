@@ -115,12 +115,43 @@ function SignIn({ message, setMessage }: { message: string; setMessage: (value: 
   </main>;
 }
 
+function ResetPassword({ onComplete }: { onComplete: (message: string) => void }) {
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!supabase) return;
+    if (password.length < 12) { setMessage('La contraseña debe tener al menos 12 caracteres.'); return; }
+    if (password !== confirmation) { setMessage('Las contraseñas no coinciden.'); return; }
+    setBusy(true); setMessage('');
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) { setMessage(`No se pudo cambiar la contraseña: ${error.message}`); setBusy(false); return; }
+    await supabase.auth.signOut({ scope: 'local' });
+    onComplete('Contraseña actualizada. Ahora puedes conectar la aplicación de escritorio con esta cuenta.');
+  };
+  return <main className="auth-wrap"><section className="auth-card">
+    <img className="auth-crest" src={emblemSrc} alt="Escudo del Cuerpo General de Bomberos Voluntarios del Perú" />
+    <p className="auth-org">CGBVP</p><h1>Restablecer contraseña</h1>
+    <p className="muted">Escribe una contraseña nueva para tu cuenta.</p>
+    <form onSubmit={submit} className="auth-form">
+      <label>Nueva contraseña<input type="password" autoComplete="new-password" minLength={12} required value={password} onChange={e => setPassword(e.target.value)} /></label>
+      <label>Confirma la contraseña<input type="password" autoComplete="new-password" minLength={12} required value={confirmation} onChange={e => setConfirmation(e.target.value)} /></label>
+      {message && <p className="error" role="alert">{message}</p>}
+      <button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar contraseña nueva'}</button>
+    </form>
+    <p className="powered-by">powered by decibelius</p>
+  </section></main>;
+}
+
 export default function App() {
   const demoMode = !supabase;
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(Boolean(supabase));
   const [authMessage, setAuthMessage] = useState('');
+  const [recoveryMode, setRecoveryMode] = useState(false);
   const [accessError, setAccessError] = useState('');
   const [catalogs, setCatalogs] = useState<Record<string, string[]>>(seedCatalogs);
   const [general, setGeneral] = useState<GeneralData>(() => emptyGeneral());
@@ -137,6 +168,7 @@ export default function App() {
     const client = supabase;
     if (!client) return;
     let active = true;
+    let recoveringPassword = false;
     const loadAccess = async (user: User, establishExclusiveSession = false) => {
       if (!active) return;
       setLoading(true); setAccessError('');
@@ -189,15 +221,21 @@ export default function App() {
     };
     const { data: { subscription } } = client.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
+      if (event === 'PASSWORD_RECOVERY') {
+        recoveringPassword = true;
+        setRecoveryMode(true);
+        setLoading(false);
+        return;
+      }
       if (nextSession?.user) {
         if (event === 'SIGNED_IN') void loadAccess(nextSession.user, true);
       } else { setProfile(null); setLoading(false); }
     });
     void client.auth.getSession().then(({ data }) => {
-      if (active && data.session) {
+      if (active && data.session && !recoveringPassword) {
         setSession(data.session);
         void loadAccess(data.session.user);
-      } else if (active) setLoading(false);
+      } else if (active && !recoveringPassword) setLoading(false);
     });
     return () => { active = false; subscription.unsubscribe(); };
   }, []);
@@ -275,6 +313,9 @@ export default function App() {
   };
 
   if (!demoMode && loading) return <div className="loading-screen">Verificando autorización…</div>;
+  if (!demoMode && recoveryMode) return <><header className="topbar"><img className="top-crest" src={emblemSrc} alt="" /><div className="identity"><strong>CUERPO GENERAL DE BOMBEROS VOLUNTARIOS DEL PERÚ</strong><span>VII COMANDANCIA DEPARTAMENTAL</span></div><div className="product">Registro web de partes</div></header>
+    <ResetPassword onComplete={message => { setRecoveryMode(false); setAuthMessage(message); setAccessError(''); }} />
+  </>;
   if (!demoMode && (!session || !profile)) return <><header className="topbar"><img className="top-crest" src={emblemSrc} alt="" /><div className="identity"><strong>CUERPO GENERAL DE BOMBEROS VOLUNTARIOS DEL PERÚ</strong><span>VII COMANDANCIA DEPARTAMENTAL</span></div><div className="product">Registro web de partes</div></header>
     <SignIn message={authMessage || accessError} setMessage={setAuthMessage} />
   </>;
@@ -298,7 +339,7 @@ export default function App() {
           <label>N.º de parte<input value={reportNumber} onChange={e => setReportNumber(e.target.value)} placeholder="Escriba el número o déjelo vacío para asignación automática" /></label>
           <label>Fecha y hora *<input type="datetime-local" required value={general.occurred_at} onChange={e => setGeneralValue('occurred_at', e.target.value)} /></label>
           <label>Emergencia *<input required list="catalog-emergency_type" value={general.emergency_type} onChange={e => setGeneralValue('emergency_type', e.target.value)} placeholder="Seleccione o escriba…" /></label>
-          <label>Codificación *<input required list="catalog-codification" value={general.codification} onChange={e => setGeneralValue('codification', e.target.value)} placeholder="Seleccione o escriba…" /></label>
+          <label>Codificación<input list="catalog-codification" value={general.codification} onChange={e => setGeneralValue('codification', e.target.value)} placeholder="Opcional: seleccione o escriba…" /></label>
           <label className="span-2">Dirección *<input required value={general.address} onChange={e => setGeneralValue('address', e.target.value)} placeholder="Dirección del incidente" /></label>
           <label>Distrito *<input required list="catalog-district" value={general.district} onChange={e => setGeneralValue('district', e.target.value)} placeholder="Seleccione o escriba…" /></label>
           <label className="span-all">Trabajo realizado *<textarea required rows={3} value={general.work_description} onChange={e => setGeneralValue('work_description', e.target.value)} /></label>
