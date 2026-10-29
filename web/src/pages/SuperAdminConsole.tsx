@@ -80,6 +80,7 @@ function downloadText(content: string, filename: string, mimeType: string) {
 export default function SuperAdminConsole({ onNewReport, onSignOut }: { onNewReport: () => void; onSignOut: () => void }) {
   const [tab, setTab] = useState<Tab>('resumen');
   const [stats, setStats] = useState<Stats | null>(null);
+  const [statsUpdatedAt, setStatsUpdatedAt] = useState<Date | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [query, setQuery] = useState('');
   const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -106,6 +107,7 @@ export default function SuperAdminConsole({ onNewReport, onSignOut }: { onNewRep
     const { data, error: rpcError } = await supabase.rpc('admin_report_statistics');
     if (rpcError) throw rpcError;
     setStats(data as Stats);
+    setStatsUpdatedAt(new Date());
   }, []);
   const loadReports = useCallback(async (text = query) => {
     if (!supabase) return;
@@ -179,6 +181,14 @@ export default function SuperAdminConsole({ onNewReport, onSignOut }: { onNewRep
       setError(reason instanceof Error ? reason.message : 'No se pudo cargar el análisis detallado.');
     } finally { setBusy(false); }
   }
+
+  useEffect(() => {
+    if (tab !== 'resumen') return;
+    const timer = window.setInterval(() => {
+      void loadStats().catch(reason => setError(reason instanceof Error ? reason.message : 'No se pudieron actualizar las estadísticas.'));
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [tab, loadStats]);
 
   useEffect(() => {
     let active = true;
@@ -309,7 +319,7 @@ export default function SuperAdminConsole({ onNewReport, onSignOut }: { onNewRep
     <nav className="admin-tabs">{([['resumen', 'Resumen'], ['partes', 'Buscar partes'], ['usuarios', 'Usuarios y permisos'], ['catalogos', 'Datos desplegables'], ['numeracion', 'Numeración']] as [Tab, string][]).map(([key, label]) => <button key={key} className={tab === key ? 'selected' : ''} onClick={() => { setTab(key); setMessage(''); setError(''); }}>{label}</button>)}</nav>
     {message && <p className="success" role="status">{message}</p>}{error && <p className="error" role="alert">{error}</p>}{busy && <p className="muted">Cargando o procesando…</p>}
     {tab === 'resumen' && <>
-      <div className="report-export-actions"><button onClick={exportStatisticsCsv} disabled={!stats}>Descargar estadísticas CSV</button><button onClick={printStatistics} disabled={!stats}>Imprimir / Guardar estadísticas PDF</button></div>
+      <div className="report-export-actions"><button onClick={() => { void loadStats().catch(reason => setError(reason instanceof Error ? reason.message : 'No se pudieron actualizar las estadísticas.')); void loadDetailedAnalytics(0); }} disabled={busy}>Actualizar estadísticas</button><button onClick={exportStatisticsCsv} disabled={!stats}>Descargar estadísticas CSV</button><button onClick={printStatistics} disabled={!stats}>Imprimir / Guardar estadísticas PDF</button>{statsUpdatedAt && <span className="small muted">Actualizado: {statsUpdatedAt.toLocaleTimeString('es-PE')}</span>}</div>
       <div className="stat-cards">{[['Total de emergencias atendidas', stats?.total_reports], ['Emergencias este mes', stats?.this_month], ['Víctimas registradas', stats?.total_victims], ['Unidades utilizadas', stats?.total_units], ['Bomberos distintos en servicio', stats?.unique_firefighters]].map(([label, value]) => <article className="stat-card" key={String(label)}><span>{label}</span><strong>{value ?? '—'}</strong></article>)}</div>
       <div className="chart-grid"><Chart title="Emergencias por tipo" rows={stats?.by_emergency ?? []} /><Chart title="Emergencias por distrito" rows={stats?.by_district ?? []} /><Chart title="Últimos 12 meses" rows={stats?.by_month ?? []} /><Chart title="Bomberos con mayor participación" rows={stats?.by_firefighter ?? []} /></div>
       <section className="admin-panel personnel-stat-panel"><h2>Emergencias atendidas por bombero y tipo</h2>{stats?.by_firefighter_emergency?.length ? <div className="table-scroll"><table className="admin-table"><thead><tr><th>Bombero</th><th>Tipo de emergencia</th><th>Partes atendidos</th></tr></thead><tbody>{stats.by_firefighter_emergency.map((item, index) => <tr key={`${item.firefighter}-${item.emergency_type}-${index}`}><td>{item.firefighter}</td><td>{item.emergency_type}</td><td>{item.count}</td></tr>)}</tbody></table></div> : <p className="muted">Sin registros de personal todavía.</p>}</section>
