@@ -84,10 +84,12 @@ footer { margin-top: 18px; padding-top: 12px; color: #778da0; border-top: 1px so
 .auth-card { width: min(440px, 100%); padding: 28px; text-align: center; background: white; border: 1px solid #c6d9eb; border-radius: 9px; box-shadow: 0 7px 28px #173a5b12; }
 .auth-crest { width: 76px; height: 84px; object-fit: contain; }
 .eyebrow { color: #315a7c; font-size: 10px; font-weight: 700; }
+.auth-org { margin: 0; color: #174c7f; font-size: 20px; font-weight: 800; }
 .auth-card h1 { margin: 9px 0; color: #174c7f; font-size: 21px; }
 .auth-form { display: grid; gap: 14px; margin-top: 20px; text-align: left; }
 .auth-form button { min-height: 42px; margin-top: 4px; }
 .small { margin-top: 16px; font-size: 11px; }
+.powered-by { margin: 12px 0 0; color: #a9bfd2; font-size: 9px; font-style: italic; }
 .config-screen, .loading-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; }
 .config-screen img { width: 72px; height: 82px; object-fit: contain; }
 .config-screen h1 { margin: 0; color: #174c7f; }

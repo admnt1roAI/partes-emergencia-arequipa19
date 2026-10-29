@@ -98,8 +98,8 @@ function SignIn({ message, setMessage }: { message: string; setMessage: (value: 
   };
   return <main className="auth-wrap">
     <section className="auth-card">
-      <img className="auth-crest" src={emblemSrc} alt="Escudo de Bomberos Arequipa 19" />
-      <p className="eyebrow">BENEMÉRITA Y CENTENARIA COMPAÑÍA DE BOMBEROS AREQUIPA 19</p>
+      <img className="auth-crest" src={emblemSrc} alt="Escudo del Cuerpo General de Bomberos Voluntarios del Perú" />
+      <p className="auth-org">CGBVP</p>
       <h1>Gestión de partes de emergencia</h1>
       <p className="muted">Ingresa con la cuenta que te asignó el administrador.</p>
       <form onSubmit={submit} className="auth-form">
@@ -109,6 +109,7 @@ function SignIn({ message, setMessage }: { message: string; setMessage: (value: 
         <button className="primary" disabled={busy}>{busy ? 'Ingresando…' : 'Iniciar sesión'}</button>
       </form>
       <p className="small muted">El acceso requiere una cuenta activa y autorización para registrar partes.</p>
+      <p className="powered-by">powered by decibelius</p>
     </section>
   </main>;
 }
@@ -253,7 +254,7 @@ export default function App() {
   };
 
   if (!demoMode && loading) return <div className="loading-screen">Verificando autorización…</div>;
-  if (!demoMode && (!session || !profile)) return <><header className="topbar"><img className="top-crest" src={emblemSrc} alt="" /><div className="identity"><strong>CUERPO GENERAL DE BOMBEROS VOLUNTARIOS DEL PERÚ</strong><span>VII COMANDANCIA DEPARTAMENTAL</span><span>BENEMÉRITA Y CENTENARIA COMPAÑÍA DE BOMBEROS AREQUIPA 19</span></div><div className="product">Registro web de partes</div></header>
+  if (!demoMode && (!session || !profile)) return <><header className="topbar"><img className="top-crest" src={emblemSrc} alt="" /><div className="identity"><strong>CUERPO GENERAL DE BOMBEROS VOLUNTARIOS DEL PERÚ</strong><span>VII COMANDANCIA DEPARTAMENTAL</span></div><div className="product">Registro web de partes</div></header>
     <SignIn message={authMessage || accessError} setMessage={setAuthMessage} />
   </>;
 
