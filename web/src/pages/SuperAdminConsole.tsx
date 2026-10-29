@@ -80,6 +80,7 @@ function downloadText(content: string, filename: string, mimeType: string) {
 export default function SuperAdminConsole({ onNewReport, onSignOut }: { onNewReport: () => void; onSignOut: () => void }) {
   const [tab, setTab] = useState<Tab>('resumen');
   const [stats, setStats] = useState<Stats | null>(null);
+  const [historicalReportCount, setHistoricalReportCount] = useState<number | null>(null);
   const [statsUpdatedAt, setStatsUpdatedAt] = useState<Date | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [query, setQuery] = useState('');
@@ -104,9 +105,14 @@ export default function SuperAdminConsole({ onNewReport, onSignOut }: { onNewRep
 
   const loadStats = useCallback(async () => {
     if (!supabase) return;
-    const { data, error: rpcError } = await supabase.rpc('admin_report_statistics');
+    const [{ data, error: rpcError }, { data: reportRows, error: reportsError }] = await Promise.all([
+      supabase.rpc('admin_report_statistics'),
+      supabase.rpc('admin_search_reports', { p_query: '', p_limit: 1, p_offset: 0 }),
+    ]);
     if (rpcError) throw rpcError;
+    if (reportsError) throw reportsError;
     setStats(data as Stats);
+    setHistoricalReportCount(Number(reportRows?.[0]?.total_count ?? 0));
     setStatsUpdatedAt(new Date());
   }, []);
   const loadReports = useCallback(async (text = query) => {
@@ -246,6 +252,7 @@ export default function SuperAdminConsole({ onNewReport, onSignOut }: { onNewRep
   const exportStatisticsCsv = () => {
     if (!stats) return;
     const rows: unknown[][] = [['Grupo', 'Dato', 'Cantidad'],
+      ['Resumen', 'Partes en el historial (incluye retirados)', historicalReportCount],
       ['Resumen', 'Total de emergencias', stats.total_reports], ['Resumen', 'Emergencias este mes', stats.this_month],
       ['Resumen', 'Víctimas registradas', stats.total_victims], ['Resumen', 'Unidades utilizadas', stats.total_units],
       ['Resumen', 'Bomberos distintos registrados', stats.unique_firefighters],
@@ -293,7 +300,7 @@ export default function SuperAdminConsole({ onNewReport, onSignOut }: { onNewRep
     const personnel = `<h2>Bomberos por tipo de emergencia</h2><table><thead><tr><th>Bombero</th><th>Tipo de emergencia</th><th>Partes atendidos</th></tr></thead><tbody>${(stats.by_firefighter_emergency ?? []).map(item => `<tr><td>${escape(item.firefighter)}</td><td>${escape(item.emergency_type)}</td><td>${item.count}</td></tr>`).join('')}</tbody></table>`;
     const popup = window.open('', '_blank');
     if (!popup) { setError('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para este sitio.'); return; }
-    popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Estadísticas globales de emergencias</title><style>body{font:13px Arial;color:#183b5c;margin:28px}h1{color:#174c7f}h2{margin:22px 0 7px;color:#174c7f;font-size:16px}table{width:100%;border-collapse:collapse}th,td{padding:7px;border:1px solid #bfd1e1;text-align:left}th{background:#edf5fc}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.summary div{border:1px solid #bfd1e1;padding:10px;background:#f5f9fd}.actions{margin:18px 0}@media print{.actions{display:none}}</style></head><body><h1>Estadísticas globales de emergencias</h1><p>Generado: ${escape(new Date().toLocaleString())}</p><div class="summary"><div><b>Total de emergencias</b><br>${stats.total_reports}</div><div><b>Emergencias este mes</b><br>${stats.this_month}</div><div><b>Bomberos distintos</b><br>${stats.unique_firefighters}</div><div><b>Víctimas registradas</b><br>${stats.total_victims}</div><div><b>Unidades utilizadas</b><br>${stats.total_units}</div></div>${rows('Emergencias por tipo', stats.by_emergency)}${rows('Emergencias por distrito', stats.by_district)}${rows('Emergencias por mes', stats.by_month)}${rows('Bomberos con mayor participación', stats.by_firefighter ?? [])}${personnel}<div class="actions"><button onclick="window.print()">Imprimir / Guardar como PDF</button></div></body></html>`);
+    popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Estadísticas globales de emergencias</title><style>body{font:13px Arial;color:#183b5c;margin:28px}h1{color:#174c7f}h2{margin:22px 0 7px;color:#174c7f;font-size:16px}table{width:100%;border-collapse:collapse}th,td{padding:7px;border:1px solid #bfd1e1;text-align:left}th{background:#edf5fc}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.summary div{border:1px solid #bfd1e1;padding:10px;background:#f5f9fd}.actions{margin:18px 0}@media print{.actions{display:none}}</style></head><body><h1>Estadísticas globales de emergencias</h1><p>Generado: ${escape(new Date().toLocaleString())}</p><div class="summary"><div><b>Partes en el historial (incluye retirados)</b><br>${historicalReportCount ?? '—'}</div><div><b>Emergencias vigentes</b><br>${stats.total_reports}</div><div><b>Emergencias vigentes este mes</b><br>${stats.this_month}</div><div><b>Bomberos distintos</b><br>${stats.unique_firefighters}</div><div><b>Víctimas registradas en partes vigentes</b><br>${stats.total_victims}</div><div><b>Unidades utilizadas en partes vigentes</b><br>${stats.total_units}</div></div>${rows('Emergencias por tipo', stats.by_emergency)}${rows('Emergencias por distrito', stats.by_district)}${rows('Emergencias por mes', stats.by_month)}${rows('Bomberos con mayor participación', stats.by_firefighter ?? [])}${personnel}<div class="actions"><button onclick="window.print()">Imprimir / Guardar como PDF</button></div></body></html>`);
     popup.document.close();
   };
   const exportReportsCsv = () => {
@@ -320,7 +327,7 @@ export default function SuperAdminConsole({ onNewReport, onSignOut }: { onNewRep
     {message && <p className="success" role="status">{message}</p>}{error && <p className="error" role="alert">{error}</p>}{busy && <p className="muted">Cargando o procesando…</p>}
     {tab === 'resumen' && <>
       <div className="report-export-actions"><button onClick={() => { void loadStats().catch(reason => setError(reason instanceof Error ? reason.message : 'No se pudieron actualizar las estadísticas.')); void loadDetailedAnalytics(0); }} disabled={busy}>Actualizar estadísticas</button><button onClick={exportStatisticsCsv} disabled={!stats}>Descargar estadísticas CSV</button><button onClick={printStatistics} disabled={!stats}>Imprimir / Guardar estadísticas PDF</button>{statsUpdatedAt && <span className="small muted">Actualizado: {statsUpdatedAt.toLocaleTimeString('es-PE')}</span>}</div>
-      <div className="stat-cards">{[['Total de emergencias atendidas', stats?.total_reports], ['Emergencias este mes', stats?.this_month], ['Víctimas registradas', stats?.total_victims], ['Unidades utilizadas', stats?.total_units], ['Bomberos distintos en servicio', stats?.unique_firefighters]].map(([label, value]) => <article className="stat-card" key={String(label)}><span>{label}</span><strong>{value ?? '—'}</strong></article>)}</div>
+      <div className="stat-cards">{[['Partes en el historial (incluye retirados)', historicalReportCount], ['Emergencias vigentes atendidas', stats?.total_reports], ['Emergencias vigentes este mes', stats?.this_month], ['Víctimas registradas en partes vigentes', stats?.total_victims], ['Unidades utilizadas en partes vigentes', stats?.total_units], ['Bomberos distintos en servicio', stats?.unique_firefighters]].map(([label, value]) => <article className="stat-card" key={String(label)}><span>{label}</span><strong>{value ?? '—'}</strong></article>)}</div>
       <div className="chart-grid"><Chart title="Emergencias por tipo" rows={stats?.by_emergency ?? []} /><Chart title="Emergencias por distrito" rows={stats?.by_district ?? []} /><Chart title="Últimos 12 meses" rows={stats?.by_month ?? []} /><Chart title="Bomberos con mayor participación" rows={stats?.by_firefighter ?? []} /></div>
       <section className="admin-panel personnel-stat-panel"><h2>Emergencias atendidas por bombero y tipo</h2>{stats?.by_firefighter_emergency?.length ? <div className="table-scroll"><table className="admin-table"><thead><tr><th>Bombero</th><th>Tipo de emergencia</th><th>Partes atendidos</th></tr></thead><tbody>{stats.by_firefighter_emergency.map((item, index) => <tr key={`${item.firefighter}-${item.emergency_type}-${index}`}><td>{item.firefighter}</td><td>{item.emergency_type}</td><td>{item.count}</td></tr>)}</tbody></table></div> : <p className="muted">Sin registros de personal todavía.</p>}</section>
       <section className="admin-panel personnel-stat-panel detailed-analytics">
