@@ -115,6 +115,10 @@ Deno.serve(async (request) => {
     });
     const { data: callerData, error: callerError } = await callerClient.auth.getUser();
     if (callerError || !callerData.user) return response({ error: 'La sesión no es válida.' }, 401);
+    const { data: isCurrentSession, error: sessionError } = await callerClient.rpc('is_current_user_session');
+    if (sessionError || isCurrentSession !== true) {
+      return response({ error: 'Esta cuenta inició sesión en otro equipo. Vuelve a iniciar sesión.' }, 401);
+    }
 
     const admin = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },

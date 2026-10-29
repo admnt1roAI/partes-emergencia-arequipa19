@@ -102,6 +102,7 @@ function SignIn({ message, setMessage }: { message: string; setMessage: (value: 
       <p className="auth-org">CGBVP</p>
       <h1>Gestión de partes de emergencia</h1>
       <p className="muted">Ingresa con la cuenta que te asignó el administrador.</p>
+      <p className="small muted">Cada cuenta puede usar una sola sesión. Al iniciar aquí, se cerrarán las demás sesiones de esa cuenta.</p>
       <form onSubmit={submit} className="auth-form">
         <label>Correo institucional<input type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} /></label>
         <label>Contraseña<input type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /></label>
@@ -136,9 +137,29 @@ export default function App() {
     const client = supabase;
     if (!client) return;
     let active = true;
-    const loadAccess = async (user: User) => {
+    const loadAccess = async (user: User, establishExclusiveSession = false) => {
       if (!active) return;
       setLoading(true); setAccessError('');
+      if (establishExclusiveSession) {
+        const { error: sessionError } = await client.rpc('claim_single_user_session');
+        if (!active) return;
+        if (sessionError) {
+          await client.auth.signOut({ scope: 'local' });
+          setSession(null); setProfile(null);
+          setAccessError('No se pudo activar esta sesión exclusiva. Vuelve a iniciar sesión y, si continúa, consulta al superadministrador.');
+          setLoading(false);
+          return;
+        }
+        const { error: revokeOtherError } = await client.auth.signOut({ scope: 'others' });
+        if (!active) return;
+        if (revokeOtherError) {
+          await client.auth.signOut({ scope: 'local' });
+          setSession(null); setProfile(null);
+          setAccessError('No se pudieron cerrar las otras sesiones de la cuenta. Vuelve a intentar el ingreso.');
+          setLoading(false);
+          return;
+        }
+      }
       const { data, error } = await client.from('profiles')
         .select('full_name, role, company_id, is_active').eq('user_id', user.id).maybeSingle();
       if (!active) return;
@@ -169,7 +190,7 @@ export default function App() {
     const { data: { subscription } } = client.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       if (nextSession?.user) {
-        if (event === 'SIGNED_IN') void loadAccess(nextSession.user);
+        if (event === 'SIGNED_IN') void loadAccess(nextSession.user, true);
       } else { setProfile(null); setLoading(false); }
     });
     void client.auth.getSession().then(({ data }) => {
@@ -249,7 +270,7 @@ export default function App() {
   };
 
   const signOut = async () => {
-    await supabase?.auth.signOut();
+    await supabase?.auth.signOut({ scope: 'local' });
     setSession(null); setProfile(null); setAuthMessage(''); setAccessError('');
   };
 

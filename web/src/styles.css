@@ -102,7 +102,7 @@ footer { margin-top: 18px; padding-top: 12px; color: #778da0; border-top: 1px so
 .admin-actions, .admin-tabs, .admin-panel .panel-title span { display: flex; gap: 8px; }
 .admin-tabs { flex-wrap: wrap; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #d6e3ee; }
 .admin-tabs button.selected { color: white; background: #176bc2; border-color: #176bc2; }
-.stat-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+.stat-cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
 .stat-card { display: flex; flex-direction: column; gap: 8px; padding: 16px; background: #f5f9fd; border: 1px solid #d2e1ef; border-radius: 6px; }
 .stat-card span { color: #617b93; font-size: 12px; }
 .stat-card strong { color: #174c7f; font-size: 28px; }
@@ -124,6 +124,13 @@ footer { margin-top: 18px; padding-top: 12px; color: #778da0; border-top: 1px so
 .admin-table td button { margin: 2px; padding: 6px 8px; font-size: 11px; }
 .admin-table .danger, .danger { color: #9b3434; }
 .admin-panel > .panel-title { min-height: 44px; }
+.report-export-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin: 12px 0; }
+.personnel-stat-panel { padding-bottom: 8px; }
+.personnel-stat-panel h2 { margin: 0; padding: 12px; color: #174c7f; background: #edf5fc; font-size: 15px; }
+.numbering-row { display: grid; grid-template-columns: minmax(150px, 1fr) repeat(3, minmax(120px, 1fr)) auto auto; gap: 10px; align-items: end; padding: 14px; border-top: 1px solid #e1eaf2; }
+.numbering-row h3 { grid-column: 1 / -1; margin: 0; color: #174c7f; font-size: 14px; }
+.numbering-row label { display: grid; gap: 5px; color: #244e74; font-size: 12px; font-weight: 700; }
+.number-preview { align-self: center; color: #617b93; font-size: 12px; white-space: nowrap; }
 .report-detail { margin: 12px; border: 1px solid #c7dbed; border-radius: 5px; }
 .report-detail .panel-title { text-transform: none; }
 .report-detail pre { max-height: 420px; overflow: auto; margin: 0; padding: 12px; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.5 Consolas, monospace; }
@@ -155,6 +162,8 @@ footer { margin-top: 18px; padding-top: 12px; color: #778da0; border-top: 1px so
   .record-personnel .field { grid-column: auto; }
   .stat-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chart-grid { grid-template-columns: 1fr; }
+  .numbering-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .numbering-row h3 { grid-column: 1 / -1; }
 }
 @media (max-width: 520px) {
   .topbar { min-height: 0; gap: 9px; padding: 9px 11px; }
@@ -185,4 +194,7 @@ footer { margin-top: 18px; padding-top: 12px; color: #778da0; border-top: 1px so
   .admin-search input { flex-basis: 100%; }
   .stat-card { padding: 12px; }
   .stat-card strong { font-size: 23px; }
+  .report-export-actions { display: grid; grid-template-columns: 1fr; }
+  .numbering-row { grid-template-columns: 1fr; }
+  .numbering-row h3 { grid-column: 1; }
 }
