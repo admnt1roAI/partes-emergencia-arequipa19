@@ -70,15 +70,15 @@ const fieldSets: Record<SectionKey, { title: string; fields: FieldDefinition[] }
   ] },
 };
 
-function localDateTime(): string {
+function localDate(): string {
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
+  return local.toISOString().slice(0, 10);
 }
 
 function emptyGeneral(name = ''): GeneralData {
   return {
-    occurred_at: localDateTime(), emergency_type: '', codification: '', address: '', district: '',
+    occurred_at: localDate(), emergency_type: '', codification: '', address: '', district: '',
     work_description: '', materials: '', uniformed: 'Sí', equipment_orderly: 'Sí', logbook_recorded: 'Sí',
     shift_operator: '', filled_by: name, observations: '', signature_name: name,
   };
@@ -290,7 +290,8 @@ export default function App() {
     const payload = {
       ...general,
       report_number: reportNumber.trim(),
-      occurred_at: new Date(general.occurred_at).toISOString(),
+      // Interpret the selected calendar day at local midnight before storing it as timestamptz.
+      occurred_at: new Date(`${general.occurred_at}T00:00:00`).toISOString(),
       victims: compact(records.victims), vehicles: compact(records.vehicles), units: compact(records.units),
       personnel: compact(records.personnel), supports: compact(records.supports), pnp_support: compact(records.pnp_support),
     };
@@ -337,7 +338,7 @@ export default function App() {
       <form onSubmit={saveReport}>
         <section className="panel general-panel"><div className="panel-title"><b>Datos generales</b></div><div className="general-grid">
           <label>N.º de parte<input value={reportNumber} onChange={e => setReportNumber(e.target.value)} placeholder="Escriba el número o déjelo vacío para asignación automática" /></label>
-          <label>Fecha y hora *<input type="datetime-local" required value={general.occurred_at} onChange={e => setGeneralValue('occurred_at', e.target.value)} /></label>
+          <label>Fecha *<input type="date" required value={general.occurred_at} onChange={e => setGeneralValue('occurred_at', e.target.value)} /></label>
           <label>Emergencia *<input required list="catalog-emergency_type" value={general.emergency_type} onChange={e => setGeneralValue('emergency_type', e.target.value)} placeholder="Seleccione o escriba…" /></label>
           <label>Codificación<input list="catalog-codification" value={general.codification} onChange={e => setGeneralValue('codification', e.target.value)} placeholder="Opcional: seleccione o escriba…" /></label>
           <label className="span-2">Dirección *<input required value={general.address} onChange={e => setGeneralValue('address', e.target.value)} placeholder="Dirección del incidente" /></label>
